@@ -82,7 +82,8 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
     const { encodeFromNameSegment } = await import('./tools/helpers/from-name.js')
     const nameSegment = encodeFromNameSegment(process.env.EMAIL_FROM_NAME)
-    process.env.EMAIL_CREDENTIALS = `${process.env.EMAIL_USER}:${process.env.EMAIL_APP_PASSWORD}` + (nameSegment ? `:${nameSegment}` : '')
+    const nameSuffix = nameSegment ? `:${nameSegment}` : ''
+    process.env.EMAIL_CREDENTIALS = `${process.env.EMAIL_USER}:${process.env.EMAIL_APP_PASSWORD}${nameSuffix}`
     state = 'configured'
     return state
   }

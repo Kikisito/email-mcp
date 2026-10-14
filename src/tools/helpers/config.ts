@@ -418,7 +418,7 @@ function extractFromName(parts: string[]): { parts: string[]; fromName?: string 
   } catch {
     // Not valid percent-encoding: use the literal text
   }
-  
+
   return { parts: parts.slice(0, -1), fromName: normalizeFromName(decoded) }
 }
 
