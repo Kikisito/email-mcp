@@ -6,7 +6,7 @@
  * one email account; the core renderer handles Add/Remove, per-card field
  * cloning, and the Outlook-style device-code follow-up. On submit the form
  * POSTs a JSON array under the `accounts` key:
- *   { accounts: [ { email, password, imap_host, imap_port }, ... ] }
+ *   { accounts: [ { email, password, from_name, imap_host, imap_port }, ... ] }
  * The server (`transports/http.ts` -> `assembleEmailCredentials`) reassembles
  * that array into the `EMAIL_CREDENTIALS` string the rest of the codebase
  * consumes, applying the Outlook domain-detect + device-code trigger.
@@ -45,6 +45,14 @@ export const RELAY_SCHEMA: RelayConfigSchema = {
         placeholder: 'Enter app password',
         helpText:
           'App Password for Gmail/Yahoo/iCloud (not your normal password). Leave blank for Outlook/Hotmail/Live — OAuth runs automatically after submit.'
+      },
+      {
+        key: 'from_name',
+        label: 'Sender Name',
+        type: 'text',
+        required: false,
+        placeholder: 'Jane Doe',
+        helpText: 'Optional. Display name recipients see in the From field (e.g. "Jane Doe <you@example.com>").'
       },
       {
         key: 'imap_host',

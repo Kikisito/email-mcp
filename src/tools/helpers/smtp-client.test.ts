@@ -494,3 +494,33 @@ describe('OAuth2 SMTP authentication', () => {
     )
   })
 })
+
+// ============================================================================
+// Sender display name (From header)
+// ============================================================================
+
+describe('From display name', () => {
+  const named: AccountConfig = { ...account, fromName: 'Jane Doe' }
+
+  it('uses the bare address when no fromName is configured', async () => {
+    await sendNewEmail(account, { to: 'r@test.com', subject: 'S', body: 'B' })
+    expect((MockMailComposer as any).mock.calls[0]![0].from).toBe('test@gmail.com')
+  })
+
+  it.each([
+    ['new', () => sendNewEmail(named, { to: 'r@test.com', subject: 'S', body: 'B' })],
+    ['reply', () => replyToEmail(named, { to: 'r@test.com', subject: 'S', body: 'B', in_reply_to: '<m@x>' })],
+    ['forward', () => forwardEmail(named, { to: 'r@test.com', subject: 'S', body: 'B', original_body: 'orig' })]
+  ])('sets name + address in the From header for %s', async (_label, send) => {
+    await send()
+    expect((MockMailComposer as any).mock.calls[0]![0].from).toEqual({
+      name: 'Jane Doe',
+      address: 'test@gmail.com'
+    })
+  })
+
+  it('keeps the SMTP envelope sender as the bare address', async () => {
+    await sendNewEmail(named, { to: 'r@test.com', subject: 'S', body: 'B' })
+    expect(mockSendMail.mock.calls[0]![0].envelope.from).toBe('test@gmail.com')
+  })
+})

@@ -130,7 +130,7 @@ export function textToHtml(text: string): string {
  * Returns the exact bytes that can be sent via SMTP and/or appended to IMAP.
  */
 async function buildRawMessage(mailOptions: {
-  from: string
+  from: string | { name: string; address: string }
   to: string
   cc?: string
   bcc?: string
@@ -145,6 +145,15 @@ async function buildRawMessage(mailOptions: {
   const { default: MailComposer } = await import('nodemailer/lib/mail-composer/index.js')
   const composer = new MailComposer(mailOptions)
   return composer.compile().build()
+}
+
+/**
+ * From header value for an account: `Name <email>` when a display name is
+ * configured (Nodemailer quotes/encodes it), the bare address otherwise.
+ * The SMTP envelope sender always stays the bare `account.email`.
+ */
+export function buildFromHeader(account: AccountConfig): string | { name: string; address: string } {
+  return account.fromName ? { name: account.fromName, address: account.email } : account.email
 }
 
 /**
@@ -198,7 +207,7 @@ export async function sendNewEmail(account: AccountConfig, options: SendEmailOpt
   const attachments = mapAttachments(options.attachments)
 
   const mailOptions = {
-    from: account.email,
+    from: buildFromHeader(account),
     to: options.to,
     cc: options.cc,
     bcc: options.bcc,
@@ -237,7 +246,7 @@ export async function replyToEmail(account: AccountConfig, options: SendEmailOpt
   const subject = options.subject.startsWith('Re:') ? options.subject : `Re: ${options.subject}`
 
   const mailOptions = {
-    from: account.email,
+    from: buildFromHeader(account),
     to: options.to,
     cc: options.cc,
     bcc: options.bcc,
@@ -274,7 +283,7 @@ export async function forwardEmail(
   const body = `${options.body}\n\n---------- Forwarded message ----------\n${options.original_body}`
 
   const mailOptions = {
-    from: account.email,
+    from: buildFromHeader(account),
     to: options.to,
     cc: options.cc,
     bcc: options.bcc,

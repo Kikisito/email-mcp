@@ -286,9 +286,10 @@ To trust mise configuration automatically, set `trusted_config_paths` in the use
 
 | Variable | Required | Default | Description |
 |:---------|:---------|:--------|:------------|
-| `EMAIL_CREDENTIALS` | Yes (stdio) | - | Email credentials, `email:app-password` per account, comma-separated for multi-account. Optional custom IMAP host/port: `email:password:imap_host:imap_port` |
+| `EMAIL_CREDENTIALS` | Yes (stdio) | - | Email credentials, `email:app-password` per account, comma-separated for multi-account. Optional custom IMAP host/port: `email:password:imap_host:imap_port`. Optional sender display name as the last segment: `email:password:name=Jane%20Doe` (percent-encode `:` and `,`) |
 | `EMAIL_USER` | Alternative (stdio, single-account) | - | Email address. Used with `EMAIL_APP_PASSWORD` as a per-field alternative to `EMAIL_CREDENTIALS`; merged into `EMAIL_CREDENTIALS` at boot |
 | `EMAIL_APP_PASSWORD` | Alternative (stdio, single-account) | - | App password (Gmail/Yahoo/iCloud) or Outlook App Password; used with `EMAIL_USER` |
+| `EMAIL_FROM_NAME` | No (stdio, single-account) | - | Sender display name for the From header (`Jane Doe <you@example.com>`); used with `EMAIL_USER` + `EMAIL_APP_PASSWORD`. The HTTP registration form has a matching *Sender Name* field |
 | `PUBLIC_URL` | No (http) | - | Server's public URL for relay / OAuth redirect links |
 | `PORT` | No | `0` (OS-assigned) | Server port (http mode); set explicitly (e.g. `8080`) to bind a fixed port |
 | `HOST` | No | - | Bind address (http mode) |

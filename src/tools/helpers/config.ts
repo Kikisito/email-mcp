@@ -4,6 +4,7 @@
  */
 
 import { EmailMCPError } from './errors.js'
+import { FROM_NAME_PREFIX, normalizeFromName } from './from-name.js'
 import type { OAuth2Tokens } from './oauth2.js'
 import { isOutlookDomain, loadStoredTokens } from './oauth2.js'
 
@@ -21,6 +22,7 @@ export interface AccountConfig {
   imap: ServerConfig
   smtp: ServerConfig
   oauth2?: OAuth2Tokens
+  fromName?: string
 }
 
 /** Well-known email provider settings */
@@ -395,21 +397,45 @@ async function handlePasswordEntry(email: string, parts: string[]): Promise<Acco
 }
 
 /**
+ * Split an optional trailing `name=<display name>` segment off a credential
+ * entry's colon-separated parts. Returns the remaining parts untouched when
+ * there is none (so passwords and hosts keep parsing exactly as before).
+ */
+function extractFromName(parts: string[]): { parts: string[]; fromName?: string } {
+  // The last segment must be a `name=` prefix (case-insensitive) to be treated as a display name.
+  const last = parts.at(-1)
+
+  // If the last segment is not a `name=` prefix, return the parts unchanged.
+  if (parts.length < 2 || last === undefined || !last.toLowerCase().startsWith(FROM_NAME_PREFIX)) {
+    return { parts }
+  }
+
+  // The last segment is a `name=` prefix. Extract the display name and return the remaining parts.
+  const rawName = last.slice(FROM_NAME_PREFIX.length)
+  let decoded = rawName
+  try {
+    decoded = decodeURIComponent(rawName)
+  } catch {
+    // Not valid percent-encoding: use the literal text
+  }
+  
+  return { parts: parts.slice(0, -1), fromName: normalizeFromName(decoded) }
+}
+
+/**
  * Parse a single credential entry
  */
 async function parseSingleCredential(entry: string): Promise<AccountConfig | null> {
   const trimmed = entry.trim()
   if (!trimmed) return null
 
-  const parts = trimmed.split(':')
+  const { parts, fromName } = extractFromName(trimmed.split(':'))
   const email = parts[0]!.trim()
 
   // Outlook/Hotmail/Live: email-only entry is valid (OAuth2, no password needed)
-  if (parts.length < 2) {
-    return handleOAuth2OnlyEntry(email)
-  }
-
-  return handlePasswordEntry(email, parts)
+  const account = parts.length < 2 ? await handleOAuth2OnlyEntry(email) : await handlePasswordEntry(email, parts)
+  if (account && fromName) account.fromName = fromName
+  return account
 }
 
 /**
@@ -427,6 +453,9 @@ async function parseSingleCredential(entry: string): Promise<AccountConfig | nul
  * - Local IMAP proxy: email:password:localhost:1993 (the literal `localhost`
  *   is accepted as a host even though it has no dot; each account may use its
  *   own host and port)
+ * - Sender display name: append `:name=<display name>` as the LAST segment, e.g.
+ *   email:password:name=Jane%20Doe or (Outlook) email:name=Jane%20Doe. The value is
+ *   percent-decoded, so encode `:` and `,` in names (encodeURIComponent).
  * - Passwords with commas are NOT supported (use env var per account instead)
  *
  * For passwords containing colons, append the host segment to disambiguate:

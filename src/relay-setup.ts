@@ -10,6 +10,7 @@
  *    mcp-core's card-group credential form into that same string.
  */
 
+import { encodeFromNameSegment } from './tools/helpers/from-name.js'
 import { isOutlookDomain } from './tools/helpers/oauth2.js'
 
 /**
@@ -40,6 +41,7 @@ export function formatCredentials(config: Record<string, string>): string {
 export interface EmailAccountCard {
   email?: string
   password?: string
+  from_name?: string
   imap_host?: string
   imap_port?: string
 }
@@ -52,6 +54,7 @@ export interface EmailAccountCard {
  *    any password typed is ignored).
  *  - Others: `email:password[:imap_host[:imap_port]]`. The port is appended
  *    only when the host carries no colon of its own.
+ *  - A non-empty `from_name` is appended last as `:name=<percent-encoded>`.
  * Cards without an email — and non-Outlook cards without a password — are
  * skipped, matching the fork's submit-time filter.
  */
@@ -65,8 +68,10 @@ export function assembleEmailCredentials(accounts: EmailAccountCard[] | undefine
     if (!email) {
       continue
     }
+    const nameSegment = encodeFromNameSegment(account?.from_name)
+    const nameSuffix = nameSegment ? `:${nameSegment}` : ''
     if (isOutlookDomain(email)) {
-      parts.push(email)
+      parts.push(`${email}${nameSuffix}`)
       continue
     }
     const password = account?.password ?? ''
@@ -77,9 +82,9 @@ export function assembleEmailCredentials(accounts: EmailAccountCard[] | undefine
     if (imapHost) {
       const imapPort = (account?.imap_port ?? '').trim()
       const imapSpec = imapPort && !imapHost.includes(':') ? `${imapHost}:${imapPort}` : imapHost
-      parts.push(`${email}:${password}:${imapSpec}`)
+      parts.push(`${email}:${password}:${imapSpec}${nameSuffix}`)
     } else {
-      parts.push(`${email}:${password}`)
+      parts.push(`${email}:${password}${nameSuffix}`)
     }
   }
   return parts.join(',')

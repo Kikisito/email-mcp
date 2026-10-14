@@ -161,3 +161,24 @@ describe('assembleEmailCredentials with OUTLOOK_EXTRA_DOMAINS', () => {
     expect(assembleEmailCredentials([{ email: 'user@company.com' }])).toBe('user@company.com')
   })
 })
+
+describe('assembleEmailCredentials — sender name', () => {
+  it('appends a percent-encoded name segment last', () => {
+    expect(
+      assembleEmailCredentials([
+        { email: 'a@gmail.com', password: 'pw', from_name: 'Jane: Doe, Inc' },
+        { email: 'b@custom.com', password: 'pw', imap_host: 'imap.custom.com', imap_port: '993', from_name: 'Bob' }
+      ])
+    ).toBe('a@gmail.com:pw:name=Jane%3A%20Doe%2C%20Inc,b@custom.com:pw:imap.custom.com:993:name=Bob')
+  })
+
+  it('appends the name to email-only Outlook entries', () => {
+    expect(assembleEmailCredentials([{ email: 'a@outlook.com', from_name: 'Jane' }])).toBe('a@outlook.com:name=Jane')
+  })
+
+  it('omits the segment for a blank name', () => {
+    expect(assembleEmailCredentials([{ email: 'a@gmail.com', password: 'pw', from_name: '   ' }])).toBe(
+      'a@gmail.com:pw'
+    )
+  })
+})

@@ -489,3 +489,47 @@ describe('resolveAccounts', () => {
     }
   })
 })
+
+describe('parseCredentials — sender display name', () => {
+  it('parses a trailing name segment', async () => {
+    const [a] = await parseCredentials('user@gmail.com:secret:name=Jane%20Doe')
+    expect(a!.password).toBe('secret')
+    expect(a!.fromName).toBe('Jane Doe')
+  })
+
+  it('round-trips colons and commas through percent-encoding', async () => {
+    const accounts = await parseCredentials(
+      `a@gmail.com:pw:name=${encodeURIComponent('Doe: Jane, Inc')},b@gmail.com:pw2`
+    )
+    expect(accounts).toHaveLength(2)
+    expect(accounts[0]!.fromName).toBe('Doe: Jane, Inc')
+    expect(accounts[1]!.fromName).toBeUndefined()
+  })
+
+  it('works after custom IMAP/SMTP segments', async () => {
+    const [a] = await parseCredentials('u@custom.com:pw:imap.custom.com:993:smtp.custom.com:465:tls:name=Jane')
+    expect(a!.imap.host).toBe('imap.custom.com')
+    expect(a!.smtp).toEqual({ host: 'smtp.custom.com', port: 465, secure: true })
+    expect(a!.password).toBe('pw')
+    expect(a!.fromName).toBe('Jane')
+  })
+
+  it('keeps passwords with colons intact', async () => {
+    const [a] = await parseCredentials('u@gmail.com:pa:ss:name=Jane')
+    expect(a!.password).toBe('pa:ss')
+    expect(a!.fromName).toBe('Jane')
+  })
+
+  it('accepts a name on an email-only Outlook entry', async () => {
+    const [a] = await parseCredentials('u@outlook.com:name=Jane')
+    expect(a!.authType).toBe('oauth2')
+    expect(a!.fromName).toBe('Jane')
+  })
+
+  it('strips control characters and ignores an empty name', async () => {
+    const [a] = await parseCredentials('u@gmail.com:pw:name=Jane%0D%0ABcc%3A%20x')
+    expect(a!.fromName).toBe('Jane  Bcc: x')
+    const [b] = await parseCredentials('u@gmail.com:pw:name=')
+    expect(b!.fromName).toBeUndefined()
+  })
+})

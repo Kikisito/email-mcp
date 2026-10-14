@@ -21,7 +21,7 @@ describe('RELAY_SCHEMA', () => {
 
   it('declares the account fields with email required and password optional', () => {
     const fields = RELAY_SCHEMA.cardGroup?.fields ?? []
-    expect(fields.map((f) => f.key)).toEqual(['email', 'password', 'imap_host', 'imap_port'])
+    expect(fields.map((f) => f.key)).toEqual(['email', 'password', 'from_name', 'imap_host', 'imap_port'])
 
     const email = fields.find((f) => f.key === 'email')
     expect(email?.type).toBe('email')
@@ -31,6 +31,9 @@ describe('RELAY_SCHEMA', () => {
     const password = fields.find((f) => f.key === 'password')
     expect(password?.type).toBe('password')
     expect(password?.required).toBe(false)
+
+    const fromName = fields.find((f) => f.key === 'from_name')
+    expect(fromName?.required).toBe(false)
 
     const imapHost = fields.find((f) => f.key === 'imap_host')
     expect(imapHost?.required).toBe(false)

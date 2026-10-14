@@ -80,7 +80,9 @@ export async function resolveCredentialState(): Promise<CredentialState> {
   // 1b. stdio per-field env vars (set by plugin config) — synthesize the
   // combined EMAIL_CREDENTIALS string the rest of the codebase expects.
   if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
-    process.env.EMAIL_CREDENTIALS = `${process.env.EMAIL_USER}:${process.env.EMAIL_APP_PASSWORD}`
+    const { encodeFromNameSegment } = await import('./tools/helpers/from-name.js')
+    const nameSegment = encodeFromNameSegment(process.env.EMAIL_FROM_NAME)
+    process.env.EMAIL_CREDENTIALS = `${process.env.EMAIL_USER}:${process.env.EMAIL_APP_PASSWORD}` + (nameSegment ? `:${nameSegment}` : '')
     state = 'configured'
     return state
   }
