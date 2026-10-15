@@ -32,7 +32,7 @@ without passing the bytes through the model.
 ```json
 {"action": "download", "account": "user@gmail.com", "uid": 12345, "filename": "cv.pdf", "mode": "file"}
 ```
-- HTTP mode: `file.download_url` (plus `file_id`, `name`, `mime_type`) is a one-off link valid for 10 minutes.
+- HTTP mode: `file.download_url` (plus `file_id`, `name`, `mime_type`) is a temporary link, downloadable any number of times until it expires (10 minutes).
   Pass `{download_url, file_id}` to the other connector's file parameter.
 - stdio mode: `file.path` is a local temp file.
 
