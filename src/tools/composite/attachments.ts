@@ -3,6 +3,10 @@
  * List and download email attachments
  */
 
+import { mkdir, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { basename, join } from 'node:path'
+import { attachmentLinksAvailable, createAttachmentLink } from '../helpers/attachment-links.js'
 import type { AccountConfig } from '../helpers/config.js'
 import { resolveSingleAccount } from '../helpers/config.js'
 import { createUnknownActionError, EmailMCPError, withErrorHandling } from '../helpers/errors.js'
@@ -18,6 +22,8 @@ export interface AttachmentsInput {
   // Optional
   folder?: string
   filename?: string
+  /** base64 (default): content inline. file: a file reference (download_url in HTTP mode, local path in stdio). */
+  mode?: 'base64' | 'file'
 }
 
 /**
@@ -75,7 +81,7 @@ async function handleList(accounts: AccountConfig[], input: AttachmentsInput): P
 }
 
 /**
- * Download a specific attachment (returns base64)
+ * Download a specific attachment (base64 inline, or as a file reference when mode=file)
  */
 async function handleDownload(accounts: AccountConfig[], input: AttachmentsInput): Promise<any> {
   if (!input.filename) {
@@ -91,6 +97,19 @@ async function handleDownload(accounts: AccountConfig[], input: AttachmentsInput
 
   const attachment = await getAttachment(account, input.uid, folder, input.filename)
 
+  if (input.mode === 'file') {
+    const { content_base64, ...meta } = attachment
+    const content = Buffer.from(content_base64, 'base64')
+    return {
+      action: 'download',
+      account: account.email,
+      uid: input.uid,
+      folder,
+      ...meta,
+      file: await toFileReference(meta.filename, meta.content_type, content)
+    }
+  }
+
   return {
     action: 'download',
     account: account.email,
@@ -98,4 +117,24 @@ async function handleDownload(accounts: AccountConfig[], input: AttachmentsInput
     folder,
     ...attachment
   }
+}
+
+/**
+ * HTTP mode: short-lived download URL (the `{ download_url, file_id }` shape other
+ * connectors accept as a file parameter). stdio: write to a local temp dir and return the path.
+ */
+async function toFileReference(filename: string, contentType: string, content: Buffer): Promise<Record<string, any>> {
+  // Check if HTTP mode is available and create a short-lived download link if so.
+  // Otherwise, write to a temp file and return the path.
+  if (attachmentLinksAvailable()) {
+    const link = createAttachmentLink({ filename, contentType, content })
+    return { name: filename, mime_type: contentType, ...link }
+  }
+
+  // basename() strips any directory components a hostile filename could carry
+  const dir = join(tmpdir(), 'better-email-mcp-attachments', `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+  await mkdir(dir, { recursive: true })
+  const path = join(dir, basename(filename.replaceAll('\\', '/')) || 'attachment')
+  await writeFile(path, content)
+  return { name: filename, mime_type: contentType, path }
 }

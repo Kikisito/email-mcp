@@ -195,3 +195,67 @@ describe('attachments - validation', () => {
     ).rejects.toThrow('Multiple accounts match')
   })
 })
+
+// ============================================================================
+// download - mode=file
+// ============================================================================
+
+describe('attachments - download mode=file', () => {
+  const pdf = {
+    filename: 'cv.pdf',
+    content_type: 'application/pdf',
+    size: 4,
+    content_base64: Buffer.from('%PDF').toString('base64')
+  }
+
+  it('returns a download_url in HTTP mode and omits base64', async () => {
+    const links = await import('../helpers/attachment-links.js')
+    links.setAttachmentLinkBaseUrl('https://mail.example.com/')
+    mockGetAttachment.mockResolvedValue(pdf)
+
+    const result = await attachments(accounts, {
+      action: 'download',
+      account: 'user1@gmail.com',
+      uid: 10,
+      filename: 'cv.pdf',
+      mode: 'file'
+    })
+
+    expect(result.content_base64).toBeUndefined()
+    expect(result.file.name).toBe('cv.pdf')
+    expect(result.file.mime_type).toBe('application/pdf')
+    expect(result.file.download_url).toMatch(
+      /^https:\/\/mail\.example\.com\/attachments\/download\?token=[0-9a-f]{64}$/
+    )
+    links.clearAttachmentLinks()
+  })
+
+  it('writes a local file in stdio mode', async () => {
+    const { readFile } = await import('node:fs/promises')
+    mockGetAttachment.mockResolvedValue({ ...pdf, filename: '../../evil.pdf' })
+
+    const result = await attachments(accounts, {
+      action: 'download',
+      account: 'user1@gmail.com',
+      uid: 10,
+      filename: '../../evil.pdf',
+      mode: 'file'
+    })
+
+    expect(result.file.path).toContain('better-email-mcp-attachments')
+    expect(result.file.path).toMatch(/evil\.pdf$/)
+    expect((await readFile(result.file.path)).toString()).toBe('%PDF')
+  })
+
+  it('keeps base64 as the default', async () => {
+    mockGetAttachment.mockResolvedValue(pdf)
+    const result = await attachments(accounts, {
+      action: 'download',
+      account: 'user1@gmail.com',
+      uid: 10,
+      filename: 'cv.pdf'
+    })
+    expect(result.content_base64).toBe(pdf.content_base64)
+    expect(result.file).toBeUndefined()
+  })
+})

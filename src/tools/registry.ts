@@ -163,7 +163,7 @@ const TOOLS = [
   {
     name: 'attachments',
     description:
-      'List and download email attachments.\n\nActions (required params -> optional):\n- list (account, uid -> folder): show attachments with filename, content_type, size\n- download (account, uid, filename -> folder): get base64-encoded content\n\nUse list first to get exact filenames. Case-sensitive. Max 25MB per provider.',
+      'List and download email attachments.\n\nActions (required params -> optional):\n- list (account, uid -> folder): show attachments with filename, content_type, size\n- download (account, uid, filename -> folder, mode): get base64-encoded content, or mode=file for a file reference ({download_url, file_id} in HTTP mode, local path in stdio) to hand to other connectors such as Google Drive\n\nUse list first to get exact filenames. Case-sensitive. Max 25MB per provider.',
     annotations: {
       title: 'Attachments',
       readOnlyHint: true,
@@ -185,6 +185,12 @@ const TOOLS = [
         filename: {
           type: 'string',
           description: 'Exact attachment filename from list action (required for download). Case-sensitive.'
+        },
+        mode: {
+          type: 'string',
+          enum: ['base64', 'file'],
+          description:
+            'download only. base64 (default): content inline. file: file reference instead of content (download_url valid 10 min in HTTP mode, local path in stdio). Use file to pass the attachment to another connector.'
         }
       },
       required: ['action', 'account', 'uid']

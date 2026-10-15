@@ -37,6 +37,11 @@ import {
 } from '../credential-state.js'
 import { RELAY_SCHEMA } from '../relay-schema.js'
 import { assembleEmailCredentials, type EmailAccountCard, findUnusableAccountCards } from '../relay-setup.js'
+import {
+  ATTACHMENT_LINK_PATH,
+  handleAttachmentDownload,
+  setAttachmentLinkBaseUrl
+} from '../tools/helpers/attachment-links.js'
 import { type AccountConfig, loadConfig, parseCredentials } from '../tools/helpers/config.js'
 import { initiateOutlookDeviceCode, isOutlookDomain, setOutlookTokenStore } from '../tools/helpers/oauth2.js'
 import { registerTools } from '../tools/registry.js'
@@ -385,6 +390,7 @@ export async function startHttp(): Promise<void> {
   const options = {
     ...baseOptions,
     authDisabled,
+    extraRoutes: [{ method: 'GET' as const, path: ATTACHMENT_LINK_PATH, handler: handleAttachmentDownload }],
     authScope: async (claims: { sub?: unknown; anonymous?: unknown }, next: () => Promise<void>) => {
       const sub = typeof claims.sub === 'string' ? claims.sub : null
       // Anonymous (auth-disabled) caller: skip per-user store lookup and let
@@ -419,6 +425,7 @@ export async function startHttp(): Promise<void> {
   const baseUrl = resolveSetupBaseUrl(process.env.PUBLIC_URL, handle.host, handle.port)
   const setupUrl = `${baseUrl}/authorize`
   setSetupUrl(setupUrl)
+  setAttachmentLinkBaseUrl(baseUrl)
   console.error(`[${SERVER_NAME}] HTTP mode on ${baseUrl}/mcp`)
   if (authDisabled && process.env.EMAIL_CREDENTIALS) {
     console.error(
