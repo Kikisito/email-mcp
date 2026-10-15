@@ -92,8 +92,8 @@ export function handleAttachmentDownload(req: IncomingMessage, res: ServerRespon
   // Unknown and expired tokens get the same 404 so a caller cannot tell them apart
   if (!entry || entry.expiresAt <= Date.now()) {
     // Free the memory right away instead of waiting for the next prune()
-    if(entry) entries.delete(token)
-      
+    if (entry) entries.delete(token)
+
     res.writeHead(404, { 'Content-Type': 'text/plain' })
     res.end('Not found or expired')
     return
